@@ -6,6 +6,13 @@ readonly PORT6379_CLOUD="amazon-us-east"
 #readonly PORT6379_API_ENDPOINT="http://127.0.0.1:8081"
 readonly PORT6379_API_ENDPOINT="https://api.${PORT6379_CLOUD}.port6379.com"
 
+# we should probably not run as root
+if [ `whoami` = "root" ] && [ "$LEIN_ROOT" = "" ]; then
+    echo "WARNING: You're currently running as root; probably by accident."
+    echo "Press control-C to abort or Enter to continue as root."
+    read _
+fi
+
 # add some padding on the top of output
 #clear
 echo
@@ -35,13 +42,13 @@ while [ -h "$SCRIPT" ] ; do
 done
 
 # choose and config curl or wget (thanx lein2!)
-# HTTP_CLIENT="wget --no-check-certificate -O"
-# if type -p curl >/dev/null 2>&1; then
-#     if [ "$https_proxy" != "" ]; then
-#         CURL_PROXY="-x $https_proxy"
-#     fi
-#     HTTP_CLIENT="curl $CURL_PROXY --insecure -f -L -o"
-# fi
+HTTP_CLIENT="wget --no-check-certificate -O"
+if type -p curl >/dev/null 2>&1; then
+    if [ "$https_proxy" != "" ]; then
+        CURL_PROXY="-x $https_proxy"
+    fi
+    HTTP_CLIENT="curl $CURL_PROXY --insecure -f -L -o"
+fi
 
 # Commands
 if [ "$1" = "test" ]; then
@@ -55,7 +62,6 @@ elif [ "$1" = "upgrade" ]; then
         echo "You do not have permission to upgrade the installation in $SCRIPT"
         exit 1
     else
-        # TARGET_VERSION="${2:-"preview"}"
         TARGET_VERSION="stable"
         echo "The script at $SCRIPT ($PORT6379_VERSION) will be upgraded to the latest $TARGET_VERSION version."
         echo -n "Do you want to continue [Y/n]? "
@@ -64,12 +70,13 @@ elif [ "$1" = "upgrade" ]; then
             y|Y|"")
                 echo
                 echo "Upgrading..."
-                # TARGET="/tmp/port6379-$$-upgrade"
-                # PORT6379_SCRIPT_URL="https://assets.port6379.com/port6379.sh"
-                # $HTTP_CLIENT "$TARGET" "$PORT6379_SCRIPT_URL" \
-                #     && mv "$TARGET" "$SCRIPT" \
-                #     && chmod +x "$SCRIPT" \
-                #     && echo && echo "Now running" `$SCRIPT version`
+		echo "Using $HTTP_CLIENT"
+                TARGET="/tmp/port6379-$$-upgrade"
+		PORT6379_SCRIPT_URL="https://github.com/wallrat/port6379-cli/raw/master/port6379"
+                $HTTP_CLIENT "$TARGET" "$PORT6379_SCRIPT_URL" \
+                    && mv "$TARGET" "$SCRIPT" \
+                    && chmod +x "$SCRIPT" \
+                    && echo && echo "Now running" `$SCRIPT version`
                 exit $?;;
             *)
                 echo "Aborted."
