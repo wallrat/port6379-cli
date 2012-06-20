@@ -1,4 +1,4 @@
 port6379-cli
 ============
 
-CLI for https://port6379.com
+command line interface for https://port6379.com
