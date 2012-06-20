@@ -1,0 +1,169 @@
+#!/bin/bash
+readonly PORT6379_HOME="$HOME/.port6379"
+readonly PORT6379_CONFIG=$PORT6379_HOME/config.sh
+readonly PORT6379_VERSION="0.9.0"
+readonly PORT6379_CLOUD="amazon-us-east"
+#readonly PORT6379_API_ENDPOINT="http://127.0.0.1:8081"
+readonly PORT6379_API_ENDPOINT="https://api.${PORT6379_CLOUD}.port6379.com"
+
+# add some padding on the top of output
+#clear
+echo
+
+# load config
+[[ ! -d $PORT6379_HOME ]] && mkdir -p $PORT6379_HOME
+
+
+#from lein2
+# normalize $0 on certain BSDs
+# if [ "$(dirname "$0")" = "." ]; then
+#     SCRIPT="$(which $(basename "$0"))"
+# else
+#     SCRIPT="$0"
+# fi
+SCRIPT="$0"
+
+# resolve symlinks to the script itself portably (thanx Leiningen!)
+while [ -h "$SCRIPT" ] ; do
+    ls=`ls -ld "$SCRIPT"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+        SCRIPT="$link"
+    else
+        SCRIPT="$(dirname "$SCRIPT"$)/$link"
+    fi
+done
+
+# choose and config curl or wget (thanx lein2!)
+# HTTP_CLIENT="wget --no-check-certificate -O"
+# if type -p curl >/dev/null 2>&1; then
+#     if [ "$https_proxy" != "" ]; then
+#         CURL_PROXY="-x $https_proxy"
+#     fi
+#     HTTP_CLIENT="curl $CURL_PROXY --insecure -f -L -o"
+# fi
+
+# Commands
+if [ "$1" = "test" ]; then
+    echo "Running $SCRIPT"
+    exit 0
+elif [ "$1" = "version" ]; then
+    echo $PORT6379_VERSION
+    exit 0
+elif [ "$1" = "upgrade" ]; then
+    if [ ! -w "$SCRIPT" ]; then
+        echo "You do not have permission to upgrade the installation in $SCRIPT"
+        exit 1
+    else
+        # TARGET_VERSION="${2:-"preview"}"
+        TARGET_VERSION="stable"
+        echo "The script at $SCRIPT ($PORT6379_VERSION) will be upgraded to the latest $TARGET_VERSION version."
+        echo -n "Do you want to continue [Y/n]? "
+        read RESP
+        case "$RESP" in
+            y|Y|"")
+                echo
+                echo "Upgrading..."
+                # TARGET="/tmp/port6379-$$-upgrade"
+                # PORT6379_SCRIPT_URL="https://assets.port6379.com/port6379.sh"
+                # $HTTP_CLIENT "$TARGET" "$PORT6379_SCRIPT_URL" \
+                #     && mv "$TARGET" "$SCRIPT" \
+                #     && chmod +x "$SCRIPT" \
+                #     && echo && echo "Now running" `$SCRIPT version`
+                exit $?;;
+            *)
+                echo "Aborted."
+                exit 1;;
+        esac
+    fi
+elif [ "$1" = "login" ]; then
+    USER=$2
+    if [[ -z $USER ]]; then
+	echo -n "Email: "
+	read USER
+    fi
+
+    echo -n "Password: "
+    read -s PASSWORD
+    echo
+
+    ## login
+    RESPONSE=$(curl -s -L -d "u=$USER" -d "p=$PASSWORD" "$PORT6379_API_ENDPOINT/login")
+    if [ "$?" = "7" ]; then
+	echo "Could not contact API endpoint at $PORT6379_API_ENDPOINT"
+	echo
+	exit 1
+    fi
+
+    # validate credentials
+    CHECK=$(curl -s -L -u "$USER:$RESPONSE" "$PORT6379_API_ENDPOINT/check-credentials")
+    if [[ ! "ok" = "$CHECK" ]]; then
+	echo $RESPONSE
+	echo
+	exit 1
+    fi
+
+    echo "PORT6379_API_USER=\"$USER\"" > $PORT6379_CONFIG
+    echo "PORT6379_API_KEY=\"$RESPONSE\"" >> $PORT6379_CONFIG
+
+    echo "Stored api-key \"$RESPONSE\" to $PORT6379_CONFIG"
+    echo
+    exit 0
+fi
+
+# source config
+if [ ! -f $PORT6379_CONFIG ]; then
+    echo "$PORT6379_CONFIG not found"
+    echo "Run $0 login to add you credentials"
+    echo
+    exit 1
+fi
+source $PORT6379_CONFIG
+
+# api test call?
+if [ "$1" = "api" ]; then
+    shift
+    if [ "$1" = "" ]; then
+	echo "Usage: port6379 api [curl options] resource"
+	echo
+	exit 1
+    fi
+    CMD="curl -i -L -u $PORT6379_API_USER:$PORT6379_API_KEY $PORT6379_API_ENDPOINT$*"
+    echo $CMD
+    $CMD
+    echo
+    exit 0
+fi
+
+# openssl is available on most linux and OSX, but not cygwin
+if type -p openssl >/dev/null 2>&1; then
+    B64=$(echo -n "$*" | openssl enc -base64 | tr -d '\n')
+elif type -p base64 >/dev/null 2>&1; then
+    B64=$(echo -n "$*" | base64 -w 0)
+else
+    echo "Error: Could not find 'base64' or 'openssl'"
+    exit 1
+fi
+
+# normal CLI call
+CMD="curl -s -L -d base64=$B64 -u $PORT6379_API_USER:$PORT6379_API_KEY $PORT6379_API_ENDPOINT/cli/cmd"
+RESPONSE=$($CMD)
+CMDRESULT=$?
+
+if [ "$CMDRESULT" = "7" ]; then
+    echo "Could not contact API endpoint at $PORT6379_API_ENDPOINT"
+    # echo "Trying to get current status from http://port6379.com/status.."
+    # curl -s -h "Accept-content-type: text/plain" "http://port6379.com/status"
+    echo
+    exit 1
+fi
+
+if [ ! "$CMDRESULT" = "0" ]; then
+    echo "Error $CMDRESULT"
+    echo "$RESPONSE"
+    echo
+    exit 1
+fi
+
+echo "$RESPONSE"
+echo
