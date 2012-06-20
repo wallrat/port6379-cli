@@ -3,18 +3,16 @@ readonly PORT6379_HOME="$HOME/.port6379"
 readonly PORT6379_CONFIG=$PORT6379_HOME/config.sh
 readonly PORT6379_VERSION="0.9.0"
 readonly PORT6379_CLOUD="amazon-us-east"
-#readonly PORT6379_API_ENDPOINT="http://127.0.0.1:8081"
 readonly PORT6379_API_ENDPOINT="https://api.${PORT6379_CLOUD}.port6379.com"
 
 # we should probably not run as root
-if [ `whoami` = "root" ] && [ "$LEIN_ROOT" = "" ]; then
+if [ `whoami` = "root" ]; then
     echo "WARNING: You're currently running as root; probably by accident."
     echo "Press control-C to abort or Enter to continue as root."
     read _
 fi
 
 # add some padding on the top of output
-#clear
 echo
 
 # load config
