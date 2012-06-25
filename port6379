@@ -129,7 +129,7 @@ source $PORT6379_CONFIG
 if [ "$1" = "api" ]; then
     shift
     if [ "$1" = "" ]; then
-	echo "Usage: port6379 api [curl options] resource"
+	echo "Usage: $0 api [curl options] resource"
 	echo
 	exit 1
     fi
@@ -151,14 +151,14 @@ else
 fi
 
 # normal CLI call
-CMD="curl -s -L -d base64=$B64 -u $PORT6379_API_USER:$PORT6379_API_KEY $PORT6379_API_ENDPOINT/cli/cmd"
+CMD="curl -f -s -L -d base64=$B64 -u $PORT6379_API_USER:$PORT6379_API_KEY $PORT6379_API_ENDPOINT/cli/cmd"
 RESPONSE=$($CMD)
 CMDRESULT=$?
 
-if [ "$CMDRESULT" = "7" ]; then
+if [ "$CMDRESULT" = "7" ] || [ "$CMDRESULT" = "22" ]; then
     echo "Could not contact API endpoint at $PORT6379_API_ENDPOINT"
     # echo "Trying to get current status from http://port6379.com/status.."
-    # curl -s -h "Accept-content-type: text/plain" "http://port6379.com/status"
+    # curl -s -H "Accept-content-type: text/plain" "https://port6379.com/status"
     echo
     exit 1
 fi
