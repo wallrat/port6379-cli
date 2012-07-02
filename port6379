@@ -1,9 +1,18 @@
 #!/bin/bash
+
+# cloud
+if [ "$1" = "-c" ]; then
+    shift
+    readonly PORT6379_CLOUD="$1"
+    shift
+fi
+
+# env
 readonly PORT6379_HOME="$HOME/.port6379"
 readonly PORT6379_CONFIG=$PORT6379_HOME/config.sh
 readonly PORT6379_VERSION="0.9.0"
-readonly PORT6379_CLOUD="amazon-us-east"
-readonly PORT6379_API_ENDPOINT="https://api.${PORT6379_CLOUD}.port6379.com"
+[ -z $PORT6379_CLOUD ] && readonly PORT6379_CLOUD="amazon-us-east"
+[ -z $PORT6379_API_ENDPOINT ] && readonly PORT6379_API_ENDPOINT="https://api.${PORT6379_CLOUD}.port6379.com"
 
 # we should probably not run as root
 if [ `whoami` = "root" ]; then
