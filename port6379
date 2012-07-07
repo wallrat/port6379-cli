@@ -64,6 +64,10 @@ if [ "$1" = "test" ]; then
 elif [ "$1" = "version" ]; then
     echo $PORT6379_VERSION
     exit 0
+elif [ "$1" = "status" ]; then
+    curl -s -H "Accept-content-type: text/plain" "http://status.port6379.com"
+    echo; echo
+    exit 0
 elif [ "$1" = "upgrade" ]; then
     if [ ! -w "$SCRIPT" ]; then
         echo "You do not have permission to upgrade the installation in $SCRIPT"
@@ -166,10 +170,8 @@ CMDRESULT=$?
 
 if [ "$CMDRESULT" = "7" ] || [ "$CMDRESULT" = "22" ]; then
     echo "Could not contact API endpoint at $PORT6379_API_ENDPOINT"
-    # echo "Trying to get current status from http://port6379.com/status.."
-    # curl -s -H "Accept-content-type: text/plain" "https://port6379.com/status"
-    echo
-    exit 1
+    echo "Trying to get current status from http://status.port6379.com"
+    exec $0 status
 fi
 
 if [ ! "$CMDRESULT" = "0" ]; then
