@@ -106,7 +106,7 @@ elif [ "$1" = "login" ]; then
     echo
 
     ## login
-    RESPONSE=$(curl -s -L -d "u=$USER" -d "p=$PASSWORD" "$PORT6379_API_ENDPOINT/login")
+    RESPONSE=$(curl -s -L -d "u=$USER" --data-urlencode "p=$PASSWORD" "$PORT6379_API_ENDPOINT/login")
     if [ "$?" = "7" ]; then
 	echo "Could not contact API endpoint at $PORT6379_API_ENDPOINT"
 	echo
