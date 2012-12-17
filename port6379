@@ -132,7 +132,7 @@ fi
 # source config
 if [ ! -f $PORT6379_CONFIG ]; then
     echo "$PORT6379_CONFIG not found"
-    echo "Run $0 login to add you credentials"
+    echo "Run $0 login to add your credentials"
     echo
     exit 1
 fi
